@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users - Pill Query</title>
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    <!-- MDB -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/7.3.2/mdb.min.css" rel="stylesheet" />
+
+    <style>
+        body {
+            background-color: #0f172a; /* Slate-900 */
+            color: #f1f5f9; /* Slate-100 */
+        }
+        h1 {
+            color: #fff;
+        }
+        #suggestions-panel {
+            z-index: 1050; /* Ensure it's above other elements */
+            max-height: 450px;
+            overflow-y: auto;
+            background-color: #1e293b; /* Slate-800 */
+            border: 1px solid #334155; /* Slate-700 */
+        }
+        .list-group-item {
+            background-color: #1e293b; /* Slate-800 */
+            border-color: #334155; /* Slate-700 */
+            color: #f1f5f9; /* Slate-100 */
+        }
+        .list-group-item.active {
+            background-color: #3b82f6; /* Blue-600 */
+            border-color: #3b82f6;
+        }
+        .list-group-item:hover {
+            background-color: #334155; /* Slate-700 */
+        }
+        .list-group-item .badge {
+            font-size: 0.75em;
+            vertical-align: middle;
+            background-color: #475569 !important; /* slate-600 */
+        }
+        /* Pill Input Container */
+        .pill-input-container {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border: 1px solid #475569; /* Slate-600 */
+            border-radius: 0.375rem;
+            background-color: #1e293b; /* Slate-800 */
+            min-height: 40px;
+            cursor: text;
+        }
+        .query-pill {
+            display: inline-flex;
+            align-items: center;
+            background-color: #334155; /* Slate-700 */
+            color: #e2e8f0; /* Slate-200 */
+            padding: 0.25rem 0.5rem;
+            border: 1px solid #334155; /* Normal border */
+            border-radius: 0.25rem;
+            font-family: monospace;
+            font-size: 0.9em;
+            cursor: pointer; /* Make pill look clickable */
+            transition: border-color 0.2s ease-in-out;
+        }
+        .query-pill:hover {
+            background-color: #475569; /* Add hover effect */
+        }
+        /* New invalid pill style */
+        .query-pill.invalid {
+            border-color: #ef4444; /* Red-500 */
+            border-style: dashed;
+        }
+        .query-pill .pill-remove {
+            margin-left: 0.5rem;
+            cursor: pointer;
+            color: #94a3b8; /* Slate-400 */
+        }
+        .query-pill .pill-remove:hover {
+            color: #fff;
+            background-color: transparent; /* Don't bubble pill hover */
+        }
+        .query-operator {
+            color: #60a5fa; /* Blue-400 */
+            font-weight: bold;
+            font-family: monospace;
+        }
+        #pill-query-input {
+            flex-grow: 1;
+            border: none;
+            background: transparent;
+            color: #f1f5f9;
+            outline: none;
+            min-width: 100px;
+            padding: 0.25rem;
+        }
+        /* New query controls */
+        #query-controls {
+            display: none; /* Hidden by default */
+            align-items: center;
+            gap: 0.25rem;
+            margin-left: auto; /* Push to the far right */
+        }
+        .pill-input-container.has-pills #query-controls {
+            display: flex; /* Show when pills are present */
+        }
+        .query-control-btn {
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+        .query-control-btn:hover {
+            color: #fff;
+            background-color: #334155;
+        }
+        
+        .btn-primary { background-color: #4f46e5; border-color: #4f46e5; }
+        .btn-primary:hover, .btn-primary:focus, .btn-primary:active { background-color: #4338ca; border-color: #4338ca; }
+        .btn-outline-light { color: #e2e8f0; border-color: #64748b; }
+        .btn-outline-light:hover { background-color: #475569; color: #f8fafc; }
+        .card { background-color: #1e293b; }
+        .table { color: #f1f5f9; }
+        .table thead th { color: #cbd5e1; background-color: #334155; border-color: #1e293b; }
+        .table tbody tr { border-bottom-color: #334155; }
+        .table-hover tbody tr:hover { background-color: #334155 !important; color: #fff; }
+        .badge-success { background-color: #16a34a !important; }
+        .badge-warning { background-color: #d97706 !important; }
+        .badge-danger { background-color: #dc2626 !important; }
+        .badge-secondary { background-color: #64748b !important; }
+        .kbd-shortcut {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 0.8em;
+            font-family: monospace;
+            vertical-align: middle;
+            color: #e2e8f0;
+        }
+        /* A new style for helper text that won't be picked up by keyboard nav */
+        .suggestion-helper {
+            padding: 0.75rem 1rem;
+            font-size: 0.9em;
+            color: #94a3b8; /* slate-400 */
+            font-style: italic;
+        }
+    </style>
+</head>
+<body data-mdb-theme="dark" class="p-4 sm:p-6 md:p-8">
+
+    <div class="container mt-4">
+        <h1 class="mb-5">Users</h1>
+
+        <!-- Main Query Input Box -->
+        <div class="mb-5">
+            <div class="d-flex align-items-center gap-3">
+                <div class="flex-grow-1 position-relative">
+                    <!-- Pill Input Container -->
+                    <div class="pill-input-container" id="pill-input-container">
+                        <!-- Pills will be rendered here -->
+                        <input type="text" id="pill-query-input" placeholder="Search or build a query..." />
+                        <!-- New Query Controls -->
+                        <div id="query-controls">
+                            <i id="share-query-btn" class="fas fa-share-alt query-control-btn" title="Copy shareable link"></i>
+                            <i id="clear-all-btn" class="fas fa-times query-control-btn" title="Clear all filters"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Suggestions Panel (for text input) -->
+                    <div id="suggestions-panel" class="position-absolute w-100 shadow-5-strong rounded-3" style="display: none;"></div>
+                </div>
+
+                <div class="flex-shrink-0">
+                    <button id="copy-query-btn" class="btn btn-outline-light">Copy</button>
+                    <span id="copy-feedback" class="text-success ms-2" style="opacity: 0; transition: opacity 0.3s ease-in-out;">Copied!</span>
+                </div>
+            </div>
+             <div class="form-text text-muted mt-2 ps-1 d-flex align-items-center">
+                <span>Press <kbd class="kbd-shortcut">↓</kbd> to see options. Try <kbd class="kbd-shortcut">blocked:false</kbd> or <kbd class="kbd-shortcut">-identities.connection:saml</kbd></span>
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>User ID</th>
+                                <th>Connection</th>
+                                <th>Logins</th>
+                                <th>Blocked</th>
+                                <th>Last Login</th>
+                            </tr>
+                        </thead>
+                        <tbody id="user-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MDB -->
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/7.3.2/mdb.umd.min.js"></script>
+
+<script>
+/**
+ * @file query-builder.js
+ * @description Implements a 'pill-based' query builder component with intelligent auto-complete.
+ *
+ * @architecture
+ * This component operates as a complex, self-contained state machine. The 'state'
+ * is managed not just by the `queryState` array (the pills), but by a sensitive
+ * combination of the text input's value, the suggestion panel's visibility,
+ * and a set of critical state flags (`isSuggesting`, `justCompletedPill`).
+ *
+ * @interaction_model
+ * - "Implicit Submit": The query runs automatically every time a pill is added, removed, or edited.
+ * - "Drill-Down": Selecting a Field (e.g., 'role') immediately triggers the display of valid Values.
+ * - "State Safety": Flags prevent race conditions between focus, click, and input events.
+ */
+
+document.addEventListener('DOMContentLoaded', () => {
+    // --- DATA SCHEMA & MOCKS ---
+    const searchableFields = {
+        'app_metadata': { type: 'metadata', description: 'Custom app-specific data' },
+        'authentication_method': { type: 'enum', description: 'MFA factor used' },
+        'blocked': { type: 'boolean', description: 'User block status' },
+        'created_at': { type: 'date', description: 'User creation timestamp' },
+        'email': { type: 'string', description: 'User\'s email address' },
+        'email_verified': { type: 'boolean', description: 'Email verification status' },
+        'identities.connection': { type: 'enum', description: 'Connection name' },
+        'last_login': { type: 'date', description: 'Last login timestamp' },
+        'last_password_reset': { type: 'date', description: 'Last password reset timestamp' },
+        'logins_count': { type: 'number', description: 'Number of logins' },
+        'name': { type: 'string', description: 'User\'s full name' },
+        'organization': { type: 'string', description: 'User\'s organization name or ID' },
+        'role': { type: 'enum', description: 'User\'s role' },
+        'updated_at': { type: 'date', description: 'User last update timestamp' },
+        'user_metadata': { type: 'metadata', description: 'Custom user-specific data' },
+    };
+    const authMethodOptions = [
+        'Push notification',
+        'SMS notification',
+        'Voice notification',
+        'One-time password',
+        'Email',
+        'Duo',
+        'WebAuthn',
+    ];
+    const roleOptions = ['Admin', 'Editor', 'Viewer'];
+    const connectionOptions = [
+        'Username-Password-Authentication',
+        'google-oauth2',
+        'saml',
+        'facebook',
+    ];
+    const mockUsers = [
+        { name: 'Alice Johnson', email: 'alice.j@workplace.io', email_verified: true, logins_count: 12, blocked: false, last_login: '2025-09-24T10:00:00Z', last_password_reset: '2025-09-01T10:00:00Z', app_metadata: { plan: 'gold', seats: 5 }, organization: { name: 'Acme Corp', id: 'org_GxlLOQd7FVfXMsiA' }, authentication_method: 'Push notification', role: 'Admin', identities: [{ connection: 'Username-Password-Authentication', user_id: 'auth0|102938475610293847561' }] },
+        { name: 'Bob Williams', email: 'bob.w@startup.net', email_verified: false, logins_count: 3, blocked: false, last_login: '2025-09-23T14:30:00Z', last_password_reset: '2025-08-15T14:30:00Z', app_metadata: { plan: 'silver', seats: 1 }, organization: { name: 'Startup Inc', id: 'org_Kj8RnHs3bT2fPqYl' }, authentication_method: 'SMS notification', role: 'Admin', identities: [{ connection: 'google-oauth2', user_id: 'google-oauth2|110572398439748821955' }] },
+        { name: 'Charlie Brown', email: 'charlie.b@example.com', email_verified: true, logins_count: 45, blocked: true, last_login: '2025-09-20T08:15:00Z', last_password_reset: '2025-07-20T08:15:00Z', user_metadata: { theme: 'dark', language: 'en' }, organization: { name: 'Acme Corp', id: 'org_GxlLOQd7FVfXMsiA' }, authentication_method: 'One-time password', role: 'Viewer', identities: [{ connection: 'saml', user_id: 'saml|192837465019283746509' }] },
+        { name: 'Diana Miller', email: 'diana.m@design.co', email_verified: true, logins_count: 0, blocked: false, last_login: null, last_password_reset: null, authentication_method: 'Email', role: 'Viewer', identities: [{ connection: 'Username-Password-Authentication', user_id: 'auth0|156473829105647382910' }] },
+        { name: 'Ethan Davis', email: 'ethan.d@dev-team.org', email_verified: false, logins_count: 1, blocked: false, last_login: '2025-09-04T20:45:00Z', last_password_reset: '2025-09-04T20:45:00Z', app_metadata: { plan: 'gold', seats: 10 }, organization: { name: 'Startup Inc', id: 'org_Kj8RnHs3bT2fPqYl' }, authentication_method: 'WebAuthn', role: 'Editor', identities: [{ connection: 'google-oauth2', user_id: 'google-oauth2|221683498540859932066' }] },
+        { name: 'Fiona Green', email: 'fiona.g@example.org', email_verified: true, logins_count: 88, blocked: false, last_login: '2025-08-15T11:00:00Z', last_password_reset: '2025-06-10T11:00:00Z', user_metadata: { theme: 'light' }, authentication_method: 'Push notification', role: 'Viewer', identities: [{ connection: 'facebook', user_id: 'facebook|105723984397488219556' }] }
+    ];
+
+    // --- COMPONENT STATE & FLAGS ---
+    
+    /**
+     * The 'source of truth' for the rendered pills.
+     * @type {Array<Object>}
+     */
+    let queryState = [];
+    
+    /**
+     * Tracks which suggestion is highlighted in the menu (0-indexed).
+     * @type {number}
+     */
+    let activeSuggestionIndex = -1;
+    
+    /**
+     * Tracks which pill is being edited, so we can insert the update at the correct index.
+     * @type {number}
+     */
+    let editingPillIndex = -1;
+    
+    /**
+     * [RACE CONDITION FIX]
+     * This is the component's most critical flag. It is set to `true` at the start of `selectSuggestion()`.
+     * Its job is to tell `handleFocus()` "Do not run, I am already handling the state."
+     * This prevents the focus event (triggered by clicking a menu item) from firing `handleInput()`
+     * at the same time as `selectSuggestion()` logic, which would break the menu-swapping logic.
+     * @type {boolean}
+     */
+    let isSuggesting = false;
+    
+    /**
+     * [UI/UX FLAG]
+     * This flag tells event handlers that a pill was *just* completed.
+     * Its job is to prevent the suggestion menu from re-appearing immediately after
+     * a user hits Enter or clicks a value, which would be visually jarring.
+     * It is reset by `ArrowDown` or any new `handleInput` event.
+     * @type {boolean}
+     */
+    let justCompletedPill = false;
+
+
+    // --- HELPER FUNCTIONS ---
+    function getISODateRange(daysAgo) {
+        const end = new Date();
+        const start = new Date();
+        const formatDate = (date) => date.toISOString().split('T')[0];
+        if (daysAgo === 1) return `[${formatDate(end)} TO ${formatDate(end)}]`;
+        start.setDate(start.getDate() - (daysAgo - 1));
+        return `[${formatDate(start)} TO ${formatDate(end)}]`;
+    }
+
+    const dateRangeOptions = [
+        { label: 'Last day', value: getISODateRange(1) },
+        { label: 'Last 7 days', value: getISODateRange(7) },
+        { label: 'Last 30 days', value: getISODateRange(30) },
+        { label: 'Last 90 days', value: getISODateRange(90) },
+        { label: 'Enter dates manually', value: 'manual' }
+    ];
+
+    // --- DOM REFERENCES ---
+    const pillInputContainer = document.getElementById('pill-input-container');
+    const queryInput = document.getElementById('pill-query-input');
+    const suggestionsPanel = document.getElementById('suggestions-panel');
+    const copyQueryBtn = document.getElementById('copy-query-btn');
+    const copyFeedback = document.getElementById('copy-feedback');
+    const userTableBody = document.getElementById('user-table-body');
+    const clearAllBtn = document.getElementById('clear-all-btn');
+    const shareQueryBtn = document.getElementById('share-query-btn');
+
+    // --- INITIALIZATION ---
+    renderUserTable(mockUsers);
+    checkURLForQuery(); 
+
+    // --- EVENT LISTENERS ---
+    pillInputContainer.addEventListener('click', () => queryInput.focus());
+    copyQueryBtn.addEventListener('click', copyQuery);
+    queryInput.addEventListener('paste', handlePaste);
+    queryInput.addEventListener('input', handleInput);
+    queryInput.addEventListener('keydown', handleKeyDown);
+    queryInput.addEventListener('focus', handleFocus);
+    document.addEventListener('click', (e) => {
+        const isClickInside = suggestionsPanel.contains(e.target) || pillInputContainer.contains(e.target);
+        if (!isClickInside) { 
+            hideSuggestions(); 
+            editingPillIndex = -1;
+        }
+    });
+    
+    clearAllBtn.addEventListener('click', () => {
+        setQueryState([]);
+        queryInput.focus();
+        updateURL(null); 
+    });
+
+    shareQueryBtn.addEventListener('click', () => {
+        const queryString = stateToQueryString();
+        if (!queryString) return;
+        
+        const encodedQuery = encodeURIComponent(queryString);
+        const shareableUrl = `${window.location.origin}${window.location.pathname}?q=${encodedQuery}`;
+        
+        fallbackCopyTextToClipboard(shareableUrl, 'Link copied!');
+    });
+
+    // --- CORE PILL LOGIC ---
+
+    /**
+     * Updates the query state, re-renders pills, and automatically triggers the query run.
+     * This centralizes state updates and ensures consistency.
+     */
+    function setQueryState(newState) {
+        queryState = newState;
+        renderPills();
+        runQuery(); // Implicit submit behavior: update results immediately
+    }
+    
+    function addPill(pill) {
+        if (editingPillIndex > -1) {
+            queryState.splice(editingPillIndex, 0, pill);
+            editingPillIndex = -1;
+        } else {
+            queryState.push(pill);
+        }
+        renderPills();
+        justCompletedPill = true; // Prevents menu re-open on completion
+        runQuery(); // Implicit submit
+    }
+    
+    function removePill(index, skipQueryRun = false) {
+        queryState.splice(index, 1);
+        editingPillIndex = -1;
+        renderPills();
+        if (!skipQueryRun) {
+            runQuery();
+        }
+    }
+    
+    /**
+     * Validates if a pill's value matches its field type.
+     * Returns true if valid, false otherwise. used for styling 'invalid' pills (dashed red border).
+     */
+    function validatePillValue(key, value) {
+        const baseField = key.split('.')[0];
+        const field = searchableFields[baseField] || searchableFields[key];
+        if (!field) return false; 
+
+        const values = value.match(/(?:"[^"]*"|[^,]+)/g) || [value];
+
+        for (const val of values) {
+            let isValid = false;
+            switch(field.type) {
+                case 'boolean':
+                    isValid = val === 'true' || val === 'false';
+                    break;
+                case 'date':
+                    isValid = /^\[(\d{4}-\d{2}-\d{2}|\*)\sTO\s(\d{4}-\d{2}-\d{2}|\*)\]$/.test(val);
+                    break;
+                case 'number':
+                    isValid = /^(>|<|>=|<=)?\d+$/.test(val);
+                    break;
+                case 'enum':
+                    const unquotedValue = val.replace(/"/g, '');
+                    if (key === 'authentication_method') isValid = authMethodOptions.includes(unquotedValue);
+                    else if (key === 'role') isValid = roleOptions.includes(unquotedValue);
+                    else if (key === 'identities.connection') isValid = connectionOptions.includes(unquotedValue);
+                    else isValid = true;
+                    break;
+                case 'string':
+                case 'metadata':
+                    isValid = val.length > 0;
+                    break;
+                default:
+                    isValid = true;
+            }
+            if (!isValid) return false; 
+        }
+        return true;
+    }
+
+    function renderPills() {
+        while (pillInputContainer.firstChild && pillInputContainer.firstChild !== queryInput) {
+            pillInputContainer.removeChild(pillInputContainer.firstChild);
+        }
+        queryState.forEach((item, index) => {
+            if (item.type === 'condition') {
+                const element = document.createElement('div');
+                element.className = 'query-pill';
+                
+                if (!validatePillValue(item.key, item.value)) {
+                    element.classList.add('invalid');
+                }
+
+                element.textContent = `${item.negated ? '-' : ''}${item.key}:${item.value}`;
+                
+                const removeBtn = document.createElement('i');
+                removeBtn.className = 'fas fa-times pill-remove';
+                removeBtn.onclick = (e) => {
+                    e.stopPropagation(); 
+                    removePill(index);
+                };
+                element.appendChild(removeBtn);
+                
+                element.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('pill-remove')) {
+                        return;
+                    }
+                    handleEditPill(index);
+                });
+
+                pillInputContainer.insertBefore(element, queryInput);
+            }
+        });
+        
+        if (queryState.length > 0) {
+            pillInputContainer.classList.add('has-pills');
+        } else {
+            pillInputContainer.classList.remove('has-pills');
+        }
+    }
+
+    /**
+     * Called when a user clicks a pill. Reverts it to text format for editing.
+     */
+    function handleEditPill(index) {
+        const pillToEdit = queryState[index];
+        if (!pillToEdit || pillToEdit.type !== 'condition') return;
+
+        editingPillIndex = index;
+        removePill(index, true); // Skip query run to avoid flicker
+
+        const pillText = `${pillToEdit.negated ? '-' : ''}${pillToEdit.key}:${pillToEdit.value}`;
+        queryInput.value = pillText;
+        
+        setTimeout(() => {
+            queryInput.focus();
+            const colonIndex = pillText.indexOf(':');
+            if (colonIndex > -1) {
+                queryInput.setSelectionRange(colonIndex + 1, pillText.length);
+            } else {
+                queryInput.select();
+            }
+            handleInput();
+        }, 0);
+    }
+
+    function handlePaste(e) {
+        const pastedText = (e.clipboardData || window.clipboardData).getData('text').trim();
+        if (!pastedText) return;
+
+        // Only intercept if it's a full query (contains :) and the input is empty
+        if (pastedText.includes(':') && queryInput.value === '') {
+            e.preventDefault(); 
+            parseStringToPills(pastedText);
+            queryInput.value = '';
+            // runQuery() will be called by parseStringToPills -> setQueryState
+        }
+        // Otherwise, let the default paste happen (for pasting simple values)
+    }
+
+    function parseStringToPills(text) {
+        const newPills = [];
+        const parts = text.split(/\s+AND\s+/i);
+        parts.forEach(part => {
+            part = part.trim();
+            let negated = false;
+            if (part.startsWith('-')) {
+                negated = true;
+                part = part.substring(1);
+            }
+            const conditionMatch = part.match(/^(\S+?):(.*)$/);
+            if (conditionMatch) {
+                newPills.push({ type: 'condition', key: conditionMatch[1], value: conditionMatch[2], negated: negated });
+            }
+        });
+        setQueryState(newPills);
+    }
+    
+    function stateToQueryString() {
+        return queryState.map(item => `${item.negated ? '-' : ''}${item.key}:${item.value}`).join(' AND ');
+    }
+
+    // --- EVENT HANDLERS & INTELLISENSE ---
+    
+    function runQuery() {
+        const hasInvalidPills = queryState.some(pill => !validatePillValue(pill.key, pill.value));
+        if (hasInvalidPills) {
+            return;
+        }
+
+        const query = stateToQueryString();
+        const filteredUsers = filterUsers(query || queryInput.value);
+        renderUserTable(filteredUsers);
+        updateURL(query);
+    }
+    
+    /**
+     * Main handler for text input. Analyzes text and renders appropriate suggestions.
+     */
+    function handleInput() {
+        justCompletedPill = false; // [STATE] Any new input invalidates this flag
+        const { value, selectionStart } = queryInput;
+        if (value.trim() === '' && editingPillIndex > -1) {
+            editingPillIndex = -1;
+        }
+
+        const analysis = analyzeQuery(value, selectionStart);
+        const suggestions = getSuggestions(analysis);
+        renderSuggestions(suggestions, analysis);
+    }
+    
+    function handleKeyDown(e) {
+        // Backspace deletes last pill if input is empty
+        if (e.key === 'Backspace' && queryInput.value === '' && queryState.length > 0) {
+            e.preventDefault();
+            removePill(queryState.length - 1);
+        }
+        
+        const suggestionsVisible = suggestionsPanel.style.display !== 'none';
+
+        // Down arrow logic
+        if (e.key === 'ArrowDown' && !suggestionsVisible && queryInput.value.trim() === '') {
+            e.preventDefault();
+            justCompletedPill = false; // [STATE] Allow menu to open
+            handleFocus();
+            return;
+        }
+
+        // Selection Logic
+        if (suggestionsVisible && (e.key === 'Enter' || e.key === 'Tab')) {
+            if (activeSuggestionIndex > -1) {
+                e.preventDefault();
+                selectSuggestionByIndex(activeSuggestionIndex);
+                return;
+            }
+        }
+        
+        // Fallback Enter Logic (Commit text if no suggestion selected)
+        if (e.key === 'Enter') {
+            if (!suggestionsVisible || (suggestionsVisible && activeSuggestionIndex === -1)) {
+                e.preventDefault();
+                addPillFromInput();
+                return;
+            }
+        }
+
+        // Navigation Logic
+        if (suggestionsVisible) {
+             if (e.key === 'ArrowDown') { e.preventDefault(); updateActiveSuggestion(1); } 
+             else if (e.key === 'ArrowUp') { e.preventDefault(); updateActiveSuggestion(-1); } 
+             else if (e.key === 'Escape') { 
+                 hideSuggestions(); 
+                 editingPillIndex = -1;
+             }
+        } else if (e.key === 'Escape') {
+            queryInput.value = '';
+            editingPillIndex = -1;
+        }
+    }
+    
+     /**
+      * Handles focus events. Shows suggestions unless a pill was just completed or a suggestion is being selected.
+      */
+     function handleFocus() {
+        // [RACE CONDITION FIX]
+        if (isSuggesting) { 
+            isSuggesting = false; // Reset and ignore
+            return; 
+        }
+        if (editingPillIndex === -1 && !justCompletedPill) {
+            const analysis = analyzeQuery(queryInput.value, queryInput.selectionStart);
+            const suggestions = getSuggestions(analysis);
+            renderSuggestions(suggestions, analysis);
+        }
+     }
+    
+    /**
+     * Parses the input string to determine context (field, value, or metadata).
+     */
+    function analyzeQuery(text, cursorPosition) {
+        const textUpToCursor = text.substring(0, cursorPosition);
+        
+        let prefix = '';
+        let queryText = textUpToCursor;
+        if (textUpToCursor.startsWith('-')) {
+            prefix = '-';
+            queryText = textUpToCursor.substring(1);
+        }
+
+        const colonIndex = queryText.indexOf(':');
+        if (colonIndex > -1) {
+            const field = queryText.substring(0, colonIndex);
+            const value = queryText.substring(colonIndex + 1);
+            // Handle comma-separated values
+            const values = value.split(',');
+            const currentToken = values.pop().trim();
+            const existingValues = values.join(',');
+            
+            return { currentToken, context: 'value', field, prefix, existingValues };
+        }
+
+        const baseField = queryText.split('.')[0];
+        if (searchableFields[baseField]?.type === 'metadata' && !queryText.includes(':')) {
+            return { currentToken: queryText, context: 'metadata_path', field: baseField, prefix: prefix };
+        }
+        
+        return { currentToken: queryText, context: 'field', prefix: prefix };
+    }
+    
+    /**
+     * Returns appropriate suggestions based on the analysis context.
+     */
+    function getSuggestions(analysis) {
+        const { currentToken, context, field } = analysis;
+        if (context === 'value') {
+            const baseField = field.split('.')[0];
+            const fieldType = searchableFields[baseField]?.type || searchableFields[field]?.type;
+            
+            if (fieldType === 'boolean') {
+                return { type: 'value', values: ['true', 'false'].filter(val => val.startsWith(currentToken.toLowerCase())) };
+            }
+            if (fieldType === 'enum') {
+                const searchVal = currentToken.replace(/"/g, '').toLowerCase();
+                let options = [];
+                if (field === 'authentication_method') {
+                    options = authMethodOptions.filter(opt => opt.toLowerCase().includes(searchVal));
+                }
+                if (field === 'role') {
+                    options = roleOptions.filter(opt => opt.toLowerCase().includes(searchVal));
+                }
+                if (field === 'identities.connection') {
+                    options = connectionOptions.filter(opt => opt.toLowerCase().includes(searchVal));
+                }
+                return { type: 'value', values: options };
+            }
+            if (fieldType === 'date') {
+                return { type: 'date_range', values: dateRangeOptions.map(opt => opt.label) };
+            }
+            return { type: 'value', values: [] };
+        }
+        
+        if (context === 'metadata_path') return { type: 'info', values: [] };
+
+        const fieldMatches = Object.keys(searchableFields).filter(fieldName => 
+            fieldName.toLowerCase().includes(currentToken.toLowerCase())
+        );
+
+        if (fieldMatches.length > 0) {
+            return { type: 'field', values: fieldMatches };
+        }
+
+        if (currentToken.length > 0) {
+            const stringFields = Object.keys(searchableFields).filter(key => {
+                const type = searchableFields[key].type;
+                return type === 'string' || type === 'enum';
+            });
+
+            // Smart prefilled suggestions (case-insensitive)
+            const prefilledSuggestions = [];
+            const tokenLower = currentToken.toLowerCase();
+
+            stringFields.forEach(fieldKey => {
+                const fieldType = searchableFields[fieldKey].type;
+                if (fieldType === 'enum') {
+                    let options = [];
+                    if (fieldKey === 'role') options = roleOptions;
+                    else if (fieldKey === 'authentication_method') options = authMethodOptions;
+                    else if (fieldKey === 'identities.connection') options = connectionOptions;
+
+                    const matchingOption = options.find(opt => opt.toLowerCase().includes(tokenLower));
+                    if (matchingOption) {
+                        prefilledSuggestions.push(`${fieldKey}:"${matchingOption}"`);
+                    }
+                } else {
+                    // Default string behavior
+                    prefilledSuggestions.push(`${fieldKey}:${currentToken}`);
+                }
+            });
+            
+            return { type: 'prefilled_query', values: prefilledSuggestions };
+        }
+
+        return { type: 'field', values: Object.keys(searchableFields) };
+    }
+    
+    /**
+     * The core 'router' function for selection logic.
+     * Handles creating pills, updating text, and managing focus transitions.
+     */
+    function selectSuggestion(selected, type) {
+        isSuggesting = true; // [RACE CONDITION FIX] Block handleFocus
+        const { value, selectionStart } = queryInput;
+        const analysis = analyzeQuery(value, selectionStart);
+        const { currentToken, field, prefix, existingValues } = analysis;
+        const baseField = field ? field.split('.')[0] : null;
+
+        if (type === 'prefilled_query') {
+            const parts = selected.match(/^(\S+?):(.*)$/);
+            if (parts) {
+                addPill({ type: 'condition', key: parts[1], value: parts[2], negated: (prefix === '-') });
+                queryInput.value = '';
+            }
+            hideSuggestions(); // Hide after committing
+        } else if (type === 'value') {
+            const fieldType = searchableFields[baseField]?.type || searchableFields[field]?.type;
+            
+            // NEW logic for immediate commit (bool and enum)
+            if (fieldType === 'enum' || fieldType === 'boolean') {
+                const valueToUse = (fieldType === 'enum') ? `"${selected}"` : selected;
+                addPill({ type: 'condition', key: field, value: valueToUse, negated: (prefix === '-') });
+                queryInput.value = '';
+                hideSuggestions(); // Hide after committing
+                return; // Return to skip timeout logic
+            }
+            // END NEW
+
+            // This logic is now only for non-enum/non-boolean values
+            const valueToUse = (fieldType === 'enum') ? `"${selected}"` : selected;
+            let newValue = valueToUse;
+            queryInput.value = `${prefix}${field}:${newValue}`;
+
+        } else if (type === 'date_range') {
+            const selectedOption = dateRangeOptions.find(opt => opt.label === selected);
+            if (!selectedOption) return;
+
+            if (selectedOption.value === 'manual') {
+                // Show manual template
+                const replacement = `${prefix}${field}:[YYYY-MM-DD TO YYY-MM-DD]`;
+                queryInput.value = replacement;
+            } else {
+                // Add pill with calculated range
+                addPill({ type: 'condition', key: field, value: selectedOption.value, negated: (prefix === '-') });
+                queryInput.value = '';
+                hideSuggestions(); // Hide after committing
+            }
+        } 
+        else if (type === 'field') {
+            // Drill-down logic: Update input with field name and prepare for value entry
+            let replacement = '';
+            const fieldType = searchableFields[selected]?.type;
+            if (fieldType === 'metadata') {
+                replacement = `${prefix}${selected}.`;
+            } else {
+                replacement = `${prefix}${selected}:`;
+            }
+            
+            const before = value.substring(0, selectionStart - currentToken.length - (prefix ? 1 : 0));
+            const after = value.substring(selectionStart);
+            queryInput.value = before + replacement + after;
+        }
+        
+        // For all selections, set timeout to focus and re-evaluate suggestions
+        setTimeout(() => {
+            queryInput.focus();
+            
+            // [STATE] If pill completed, do not re-open menu
+            if (justCompletedPill) {
+                justCompletedPill = false; // Reset flag
+                const end = queryInput.value.length;
+                queryInput.setSelectionRange(end, end);
+                return;
+            }
+
+            const datePlaceholderIndex = queryInput.value.indexOf('YYYY-MM-DD');
+            if (datePlaceholderIndex > -1) {
+                queryInput.setSelectionRange(datePlaceholderIndex, datePlaceholderIndex + 10);
+            } else {
+                handleInput(); // Show new suggestions
+                const end = queryInput.value.length;
+                queryInput.setSelectionRange(end, end);
+            }
+        }, 0);
+    }
+    
+    function selectSuggestionByIndex(index) {
+        const items = suggestionsPanel.querySelectorAll('.list-group-item-action');
+        if (items[index]) {
+            const selected = items[index].dataset.value;
+            const type = items[index].dataset.type;
+            selectSuggestion(selected, type);
+        }
+    }
+    
+    function addPillFromInput() {
+        let text = queryInput.value.trim();
+        if (!text) return;
+
+        if(text.endsWith(',')) {
+            text = text.substring(0, text.length - 1);
+        }
+
+        let negated = false;
+        if (text.startsWith('-')) {
+            negated = true;
+            text = text.substring(1);
+        }
+
+        const conditionMatch = text.match(/^(\S+?):(.*)$/);
+        if (conditionMatch) {
+            addPill({ type: 'condition', key: conditionMatch[1], value: conditionMatch[2], negated: negated });
+        } else {
+            addPill({ type: 'condition', key: 'name_email', value: `"${text}"`, negated: negated });
+        }
+        queryInput.value = '';
+    }
+
+    function hideSuggestions() {
+        suggestionsPanel.style.display = 'none';
+        activeSuggestionIndex = -1;
+    }
+
+    function renderSuggestions(suggestions, analysis) {
+        // Helper text for Metadata
+        if (analysis.context === 'metadata_path') {
+            suggestionsPanel.innerHTML = `<div class="suggestion-helper">Complete the path and add a value. (e.g. type:legacy)</div>`;
+            suggestionsPanel.style.display = 'block';
+            activeSuggestionIndex = -1; 
+            return;
+        }
+
+        // Helper text for Strings
+        if (analysis.context === 'value' && analysis.field === 'organization') {
+            suggestionsPanel.innerHTML = `<div class="suggestion-helper">Enter an organization name or ID (e.g., org_xyz).</div>`;
+            suggestionsPanel.style.display = 'block';
+            activeSuggestionIndex = -1;
+            return;
+        }
+
+        if (!suggestions || !suggestions.values || suggestions.values.length === 0) {
+            hideSuggestions();
+            return;
+        }
+
+        suggestionsPanel.innerHTML = '';
+        const listGroup = document.createElement('div');
+        listGroup.className = 'list-group';
+        
+        suggestions.values.forEach((suggestion) => {
+            const item = document.createElement('a');
+            item.href = '#!';
+            item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+            item.dataset.value = suggestion;
+            item.dataset.type = suggestions.type; 
+            
+            let description = '';
+            let mainText = suggestion;
+
+            if (suggestions.type === 'field') {
+                description = searchableFields[suggestion]?.description || '';
+                const fieldType = searchableFields[suggestion]?.type;
+                let typeBadge = '';
+                if (fieldType) {
+                    typeBadge = `<span class="badge rounded-pill badge-secondary ms-2">${fieldType}</span>`;
+                }
+                mainText = `<div><span class="font-monospace">${suggestion}</span>${typeBadge}</div>`;
+            } else if (suggestions.type === 'prefilled_query') {
+                const key = suggestion.split(':')[0];
+                description = `Search in ${key}`;
+                mainText = `<span class="font-monospace">${suggestion}</span>`;
+            } else if (suggestions.type === 'date_range') {
+                mainText = `<span>${suggestion}</span>`;
+            } else { // 'value'
+                 mainText = `<span class="font-monospace">${suggestion}</span>`;
+            }
+
+            item.innerHTML = `${mainText}<small class="text-muted">${description}</small>`;
+            item.addEventListener('click', (e) => { e.preventDefault(); selectSuggestion(suggestion, suggestions.type); });
+            listGroup.appendChild(item);
+        });
+        
+        suggestionsPanel.appendChild(listGroup);
+        suggestionsPanel.style.display = 'block';
+
+        // Auto-highlight first selectable item
+        const items = suggestionsPanel.querySelectorAll('.list-group-item-action');
+        activeSuggestionIndex = items.length > 0 ? 0 : -1;
+        if (activeSuggestionIndex === 0 && items.length > 0) {
+            items[0].classList.add('active');
+        }
+    }
+    
+    function updateActiveSuggestion(direction) {
+        const items = suggestionsPanel.querySelectorAll('.list-group-item-action');
+        if (items.length === 0) return;
+        if (activeSuggestionIndex > -1) items[activeSuggestionIndex].classList.remove('active');
+        activeSuggestionIndex += direction;
+        if (activeSuggestionIndex >= items.length) activeSuggestionIndex = 0;
+        else if (activeSuggestionIndex < 0) activeSuggestionIndex = items.length - 1;
+        items[activeSuggestionIndex].classList.add('active');
+        items[activeSuggestionIndex].scrollIntoView({ block: 'nearest' });
+    }
+    
+    // --- URL SHARING LOGIC ---
+    function updateURL(query) {
+        try {
+            const url = new URL(window.location.href);
+            if (query) {
+                url.searchParams.set('q', query);
+            } else {
+                url.searchParams.delete('q');
+            }
+            window.history.replaceState({}, '', url);
+        } catch (e) {
+            console.warn("Could not update URL: ", e.message);
+        }
+    }
+
+    function checkURLForQuery() {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const query = urlParams.get('q');
+            if (query) {
+                parseStringToPills(query);
+                // runQuery() will be called by parseStringToPills -> setQueryState
+            }
+        } catch (e) {
+            console.warn("Could not check URL for query: ", e.message);
+        }
+    }
+
+    // --- CLIPBOARD UTILS ---
+    function showCopyFeedback(message) {
+       const feedback = document.getElementById('copy-feedback');
+        if (feedback) {
+            feedback.style.opacity = '1';
+            setTimeout(() => { 
+                feedback.style.opacity = '0';
+            }, 2000);
+        }
+    }
+
+    function fallbackCopyTextToClipboard(text, message) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.top = "0";
+        textArea.style.left = "0";
+        textArea.style.position = "fixed";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            const successful = document.execCommand('copy');
+            showCopyFeedback(successful ? message : 'Failed!');
+        } catch (err) {
+            showCopyFeedback('Failed!');
+        }
+        document.body.removeChild(textArea);
+    }
+    
+    function copyQuery() {
+        const queryString = stateToQueryString();
+        if (!queryString) return;
+        fallbackCopyTextToClipboard(queryString, 'Copied!');
+    }
+    
+    // --- FILTERING & RENDERING ---
+    function getNestedValue(obj, path) {
+        if (path === 'identities.connection' && Array.isArray(obj.identities)) {
+            return obj.identities;
+        }
+        // [FIX] Handle user_id extraction from identity array
+        if (path === 'identities.user_id' && Array.isArray(obj.identities)) {
+            return obj.identities;
+        }
+        return path.split('.').reduce((acc, part) => acc && acc[part] !== undefined ? acc[part] : undefined, obj);
+    }
+
+    /**
+     * Main filtering logic. 
+     * CRITICAL: Date checks must happen BEFORE string checks to avoid incorrect casting.
+     */
+    function filterUsers(query) {
+        if (!query) return mockUsers;
+        if (!query.includes(':')) {
+            const searchTerm = query.toLowerCase();
+            return mockUsers.filter(user => (user.name && user.name.toLowerCase().includes(searchTerm)) || (user.email && user.email.toLowerCase().includes(searchTerm)));
+        }
+        const conditions = query.split(/ (?:AND) /i).map(c => c.trim()).filter(c => c);
+        return mockUsers.filter(user => {
+            return conditions.every(condition => {
+                let isNegated = false;
+                if (condition.startsWith('-')) {
+                    isNegated = true;
+                    condition = condition.substring(1);
+                }
+
+                const parts = condition.match(/^(\S+?):(.*)$/);
+                if (!parts) return false;
+                
+                const field = parts[1];
+                let value = parts[2];
+                let result = false;
+                
+                if (!validatePillValue(field, value)) {
+                    return true; 
+                }
+
+                if (field === 'name_email') {
+                     const searchTerm = value.replace(/"/g, '').toLowerCase();
+                     result = (user.name && user.name.toLowerCase().includes(searchTerm)) || (user.email && user.email.toLowerCase().includes(searchTerm));
+                } else if (field === 'organization') {
+                    if (user.organization) {
+                        const searchTerm = value.toLowerCase();
+                        result = (user.organization.name && user.organization.name.toLowerCase().includes(searchTerm)) ||
+                               (user.organization.id && user.organization.id.toLowerCase() === searchTerm);
+                    }
+                } else if (field === 'authentication_method' || field === 'role' || field === 'identities.connection') {
+                    const searchValues = value.match(/(?:"[^"]*"|[^,]+)/g) || [value];
+                    const userPropValue = getNestedValue(user, field);
+                    
+                    if (userPropValue) {
+                        result = searchValues.some(val => {
+                            const searchTerm = val.replace(/"/g, '').toLowerCase();
+                            if (Array.isArray(userPropValue)) { // Special case for identities
+                                return userPropValue.some(id => id.connection && id.connection.toLowerCase() === searchTerm);
+                            }
+                            return userPropValue.toLowerCase() === searchTerm;
+                        });
+                    }
+                }
+                 else {
+                    const userValue = getNestedValue(user, field);
+                    if (userValue !== undefined && userValue !== null) {
+                        const baseField = field.split('.')[0];
+                        const fieldType = searchableFields[baseField]?.type || searchableFields[field]?.type;
+                        const valueType = typeof userValue;
+
+                        // [CRITICAL FIX] Date check must be first
+                        if (fieldType === 'date') {
+                            const dateParts = value.match(/^\[(.*?)\sTO\s(.*?)\]$/);
+                            if (dateParts) {
+                                const userDateUTC = new Date(userValue);
+                                const userDateOnly = new Date(Date.UTC(userDateUTC.getUTCFullYear(), userDateUTC.getUTCMonth(), userDateUTC.getUTCDate()));
+                                const [, startStr, endStr] = dateParts;
+                                let isAfterStart = true;
+                                let isBeforeEnd = true;
+                                if (startStr !== '*' && startStr !== 'YYYY-MM-DD') {
+                                    const startDateParts = startStr.split('-').map(Number);
+                                    const startDateUTC = new Date(Date.UTC(startDateParts[0], startDateParts[1] - 1, startDateParts[2]));
+                                    if (userDateOnly < startDateUTC) isAfterStart = false;
+                                }
+                                if (endStr !== '*' && endStr !== 'YYYY-MM-DD') {
+                                    const endDateParts = endStr.split('-').map(Number);
+                                    const endDateUTC = new Date(Date.UTC(endDateParts[0], endDateParts[1] - 1, endDateParts[2]));
+                                    if (userDateOnly > endDateUTC) isBeforeEnd = false;
+                                }
+                                result = isAfterStart && isBeforeEnd;
+                            }
+                        } else if (valueType === 'string' || (fieldType === 'metadata' && valueType === 'string')) {
+                            const searchValues = value.match(/(?:"[^"]*"|[^,]+)/g) || [value];
+                            result = searchValues.some(val => {
+                                const searchTerm = val.replace(/"/g, '').toLowerCase();
+                                return userValue.toLowerCase().includes(searchTerm);
+                            });
+                        } else if (fieldType === 'boolean') {
+                            result = (value === 'true' && userValue) || (value === 'false' && !userValue);
+                        } else if (valueType === 'number' || (fieldType === 'metadata' && valueType === 'number')) {
+                            const opMatch = value.match(/^(>|<|>=|<=)?(\d+)$/);
+                            if (!opMatch) {
+                                result = String(userValue) === value;
+                            } else {
+                                const [, op, num] = opMatch;
+                                const numValue = parseInt(num, 10);
+                                switch (op) {
+                                    case '>': result = userValue > numValue; break;
+                                    case '<': result = userValue < numValue; break;
+                                    case '>=': result = userValue >= numValue; break;
+                                    case '<=': result = userValue <= numValue; break;
+                                    default: result = userValue === numValue; break;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                return isNegated ? !result : result;
+            });
+        });
+    }
+
+    function renderUserTable(users) {
+        userTableBody.innerHTML = '';
+        if (users.length === 0) {
+            userTableBody.innerHTML = `<tr><td colspan="5" class="text-center py-5">No users found.</td></tr>`;
+            return;
+        }
+        users.forEach(user => {
+            const row = document.createElement('tr');
+
+            // Get identity info, with fallbacks
+            const identity = user.identities && user.identities.length > 0 ? user.identities[0] : {};
+            const connection = identity.connection || 'N/A';
+            const userId = identity.user_id || 'N/A';
+
+            const lastLogin = user.last_login ? new Date(user.last_login).toLocaleDateString() : 'N/A';
+
+            // Column 1: Name & Email
+            const nameCell = `
+                <td>
+                    <div class="d-flex flex-column">
+                        <span class="fw-bold">${user.name || 'N/A'}</span>
+                        <small class="text-muted">${user.email || 'N/A'}</small>
+                    </div>
+                </td>`;
+            
+            // Column 2: User ID
+            const userIdCell = `<td><span class="font-monospace">${userId}</span></td>`;
+            
+            // Column 3: Connection
+            const connectionCell = `<td>${connection}</td>`;
+            
+            // Column 4: Logins
+            const loginsCell = `<td>${user.logins_count}</td>`;
+            
+            // Column 5: Last Login
+            const blockedStatus = user.blocked ? 'True' : 'False';
+            const blockedCell = `<td>${blockedStatus}</td>`;
+            
+            const lastLoginCell = `<td>${lastLogin}</td>`;
+
+            row.innerHTML = `${nameCell}${userIdCell}${connectionCell}${loginsCell}${blockedCell}${lastLoginCell}`;
+            userTableBody.appendChild(row);
+        });
+    }
+    
+});
+</script>
+</body>
+</html>
